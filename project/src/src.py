@@ -195,7 +195,7 @@ class RestAPI:
 
 my_app = RestAPI()    
 my_app.app
-my_app.run()
+# my_app.run()
 
 
         
