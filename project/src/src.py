@@ -186,16 +186,14 @@ class RestAPI:
 
         @self.app.errorhandler(404)
         def page_not_found(e):
-            return jsonify({'error': 'Invalid URL', 'message': 'The requested URL was not found on the server.'}), 404
+            return jsonify({'error': 'Invalid URL', 'message': 'The requested URL is not found on the server.'}), 404
 
     def run(self, port=5000):
         self.app.run(host='127.0.0.1', port=port, debug=True)
 
-
-if __name__ == "__main__":
-    app = TokenGenerator().app
-    app.run(host="0.0.0.0",port=5000, debug=True)   
-
+my_app = RestAPI()    
+my_app.app
+my_app.run()
 
 
         
