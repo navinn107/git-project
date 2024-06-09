@@ -194,7 +194,7 @@ class RestAPI:
         self.app.run(host='127.0.0.1', port=port, debug=True)
 
 my_app = RestAPI()    
-my_app.app
+app = my_app.app
 # my_app.run()
 
 
