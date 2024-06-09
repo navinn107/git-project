@@ -169,6 +169,8 @@ class RestAPI:
             data = request.json
             client_id = data.get('clientID')
             client_secret = data.get('clientSecretKey')
+            if not client_id or not client_secret:
+                return jsonify({"message": "Both  clientID and clientSecretKey are required."}), 400
 
             return self.get_token(client_id, client_secret)
 
