@@ -14,7 +14,6 @@ class RestAPI:
         self.app = Flask(__name__)
         self.setup_routes()
 
-
     def fetch_client(self, client_id ):
 
         conn = sqlite3.connect('../../db/users.db')
