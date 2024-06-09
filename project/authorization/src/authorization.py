@@ -71,12 +71,9 @@ class TokenGenerator:
         token = jwt.encode(payload, self.SECRET_KEY, algorithm='HS256')
         return token
 
-    def run(self, port=5000):
-        self.app.run(host='192.168.1.6', port=port, debug=True)
-
-
-if __name__ == '__main__':
-    TokenGenerator().run()    
+if __name__ == "__main__":
+    app = TokenGenerator().app
+    app.run(host="0.0.0.0",port=5000, debug=True)    
 
 
         

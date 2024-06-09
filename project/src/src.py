@@ -192,11 +192,9 @@ class RestAPI:
         self.app.run(host='127.0.0.1', port=port, debug=True)
 
 
-def create_app():
-    return RestAPI().app    
-
-
-app = create_app()
+if __name__ == "__main__":
+    app = TokenGenerator().app
+    app.run(host="0.0.0.0",port=5000, debug=True)   
 
 
 
