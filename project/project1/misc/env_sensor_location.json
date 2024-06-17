@@ -1,0 +1,82 @@
+[
+    {
+        "id": "c5e14fdd-882f-4d65-be32-fadabd19a465",
+        "name": "Location 1",
+        "latitude": 18.43662729,
+        "longitude": 79.12405653,
+        "address": "2-7-922 Geetha Bhavan Mukrampura Karimnagar",
+        "status": "Active"
+    },
+    {
+        "id": "f1888aeb-3c01-462c-8168-439e30aaf682",
+        "name": "Location 2",
+        "latitude": 18.43912345,
+        "longitude": 79.12678901,
+        "address": "Near Karimnagar Bus Stand",
+        "status": "Inactive"
+    },
+    {
+        "id": "10721c1a-b859-469b-a316-902a41c6c8cc",
+        "name": "Location 3",
+        "latitude": 18.43245678,
+        "longitude": 79.12234567,
+        "address": "Karimnagar Park",
+        "status": "Active"
+    },
+    {
+        "id": "1b18b3d0-1edd-4fa6-9c68-e7116ab57576",
+        "name": "Location 4",
+        "latitude": 18.43456789,
+        "longitude": 79.12789012,
+        "address": "Karimnagar Market",
+        "status": "Active"
+    },
+    {
+        "id": "eecbfb11-85ad-4eab-95cb-21682f1b7351",
+        "name": "Location 5",
+        "latitude": 18.43123456,
+        "longitude": 79.12012345,
+        "address": "Karimnagar Hospital",
+        "status": "Inactive"
+    },
+    {
+        "id": "03119322-9589-495c-b1a8-de2fb4439764",
+        "name": "Location 6",
+        "latitude": 18.43789012,
+        "longitude": 79.12345678,
+        "address": "Karimnagar School",
+        "status": "Active"
+    },
+    {
+        "id": "cd442600-dd12-454a-a777-812a0e78fff6",
+        "name": "Location 7",
+        "latitude": 18.43567890,
+        "longitude": 79.12567890,
+        "address": "Karimnagar Library",
+        "status": "Inactive"
+    },
+    {
+        "id": "e015e6ba-91af-4052-8e4f-73838ea45b77",
+        "name": "Location 8",
+        "latitude": 18.43890123,
+        "longitude": 79.12890123,
+        "address": "Karimnagar Mall",
+        "status": "Active"
+    },
+    {
+        "id": "7624356c-618c-43ce-a0bd-4453e5b688c8",
+        "name": "Location 9",
+        "latitude": 18.43345678,
+        "longitude": 79.12123456,
+        "address": "Karimnagar University",
+        "status": "Active"
+    },
+    {
+        "id": "865bbb24-d720-4bec-aedb-51091ff767b8",
+        "name": "Location 10",
+        "latitude": 18.43012345,
+        "longitude": 79.11901234,
+        "address": "Karimnagar Museum",
+        "status": "Inactive"
+    }
+]
