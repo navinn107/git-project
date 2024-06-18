@@ -11,7 +11,7 @@ class RestAPI:
         self.locations = self.load_locations()
 
     def load_locations(self):
-        with open("../env_sensor_location.json", "r") as file:
+        with open("../misc/env_sensor_location.json", "r") as file:
             return json.load(file)
 
     def generate_sensor_data(self, location_id):
@@ -43,7 +43,11 @@ class RestAPI:
                 for location in self.locations
             ]
             return jsonify(sensor_data_list), 200
-
+        
+        @self.app.route('/api/env/get-locations', methods=['GET'])
+        def get_locations():
+            return jsonify(self.locations), 200
+        
     def run(self, port=5000):
         self.app.run(host='127.0.0.1', port=port, debug=True)
 
