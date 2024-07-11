@@ -51,6 +51,5 @@ class RestAPI:
     def run(self, port=5000):
         self.app.run(host='127.0.0.1', port=port, debug=True)
 
-if __name__ == '__main__':
-    my_app = RestAPI()
-    my_app.run()
+my_app = RestAPI()
+app = my_app.app
