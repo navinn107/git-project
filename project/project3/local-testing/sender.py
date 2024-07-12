@@ -83,7 +83,7 @@ class RestAPI:
         
         """SETS UP THE FLASK ROUTE FOR THE API."""
         
-        @self.app.route('/send_request', methods=['GET'])
+        @self.app.route('/api/ndx/get-datad', methods=['GET'])
         def get_info():
             
             msisdn_val = request.args.get('msisdn')            
@@ -102,6 +102,14 @@ class RestAPI:
             # finally:
             #     if not self.connection.is_closed:
             #         self.connection.close()
+
+        @self.app.errorhandler(405)
+        def method_not_allowed(e):
+            return jsonify({'error': 'Method Not Allowed', 'message': 'The method is not allowed for the requested URL.'}), 405
+
+        @self.app.errorhandler(404)
+        def page_not_found(e):
+            return jsonify({'error': 'Invalid URL', 'message': 'The requested URL is not found on the server. It is to fetch ndx africa data'}), 404
 
     def run(self, port=5000):
         

@@ -123,15 +123,22 @@ class RestAPI:
                 return jsonify(response), response["statusCode"]
             except Exception as e:
                 print(e)
-                return jsonify({"statusCode": 500, "detail": str(e)}), 500
+                return jsonify({"statusCode": 500, "detail": str(e)}), 500  @self.app.errorhandler(405)
+        
+        def method_not_allowed(e):
+            return jsonify({'error': 'Method Not Allowed', 'message': 'The method is not allowed for the requested URL.'}), 405
 
-    def run(self, port=5000):
+        @self.app.errorhandler(404)
+        def page_not_found(e):
+            return jsonify({'error': 'Invalid URL', 'message': 'The requested URL is not found on the server. It is to fetch ndx africa data'}), 404
+
+            
+        
+
+    def run(self, port=7000):
         
         """RUNS THE FLASK APPLICATION."""
         self.app.run(host='127.0.0.1', port=port, debug=True)
-
-    
-
 
 # # Accessing the values
 timeout = int(config['default']['timeout'])
@@ -145,8 +152,6 @@ exchange_name = config['exchange']['name']
 exchange_type_name = config['exchange']['type']
 routing_key_name = config['routing']['key']
 queue_name = config['queue']['name']
-
-
 
 
 my_app = RestAPI( rabbitmq_user, rabbitmq_password, rabbitmq_broker_id, rabbitmq_region, rabbitmq_port, cipher_text, exchange_name, exchange_type_name, routing_key_name, queue_name, timeout)

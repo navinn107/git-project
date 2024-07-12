@@ -48,6 +48,15 @@ class RestAPI:
         def get_locations():
             return jsonify(self.locations), 200
         
+        @self.app.errorhandler(405)
+        def method_not_allowed(e):
+            return jsonify({'error': 'Method Not Allowed', 'message': 'The method is not allowed for the requested URL.'}), 405
+
+        @self.app.errorhandler(404)
+        def page_not_found(e):
+            return jsonify({'error': 'Invalid URL', 'message': 'The requested URL is not found on the server. It is to fetch the env data'}), 404
+
+        
     def run(self, port=5000):
         self.app.run(host='127.0.0.1', port=port, debug=True)
 

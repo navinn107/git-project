@@ -188,7 +188,7 @@ class RestAPI:
 
         @self.app.errorhandler(404)
         def page_not_found(e):
-            return jsonify({'error': 'Invalid URL', 'message': 'The requested URL is not found on the server.'}), 404
+            return jsonify({'error': 'Invalid URL', 'message': 'The requested URL is not found on the server. It is to fetch the data from ndx s3'}), 404
 
     def run(self, port=5000):
         self.app.run(host='127.0.0.1', port=port, debug=True)
