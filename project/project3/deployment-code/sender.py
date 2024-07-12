@@ -105,7 +105,7 @@ class RestAPI:
         
         """SETS UP THE FLASK ROUTE FOR THE API."""
         
-        @self.app.route('/send_request', methods=['GET'])
+        @self.app.route('/api/ndx/get-data', methods=['GET'])
         def get_info():
             
             msisdn_val = request.args.get('msisdn')            
