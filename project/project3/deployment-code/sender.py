@@ -4,24 +4,35 @@ import uuid
 import logging as log
 import time
 import json
+import ssl
+import configparser
+
+config = configparser.ConfigParser()
+config.read('rabbitmq_config.ini')
 
 log.basicConfig(level=log.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 class RestAPI:
 
-    def __init__(self, host_name, exchange_name, exchange_type_name, routing_key_name, queue_name, timeout):
+    def __init__(self, rabbitmq_user, rabbitmq_password, rabbitmq_broker_id, region, rabbitmq_port, cipher_text, exchange_name, exchange_type_name, routing_key_name, queue_name, timeout):
         
     
-        self.host = host_name
+        self.rabbitmq_user = rabbitmq_user
+        self.rabbitmq_password = rabbitmq_password
+        self.rabbitmq_broker_id = rabbitmq_broker_id
+        self.region = region
+        self.rabbitmq_port = rabbitmq_port
+        self.cipher_text = cipher_text
+
         self.exchange = exchange_name
         self.exchange_type = exchange_type_name
         self.routing_key = routing_key_name
         self.queue = queue_name
         self.timeout = timeout  
                 
-        # self.connection = None
-        # self.channel = None
-        # self.reply_queue = None
+        self.connection = None
+        self.channel = None
+        self.reply_queue = None
         
         self.connect()
 
@@ -34,9 +45,20 @@ class RestAPI:
         
         self.response_json = None
         self.correlation_id = None
-        
-        self.connection = pika.BlockingConnection(pika.ConnectionParameters(host=self.host))
+
+        # SSL Context for TLS configuration of Amazon MQ for RabbitMQ
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+        ssl_context.set_ciphers(self.cipher_text)
+
+        url = f"amqps://{self.rabbitmq_user}:{self.rabbitmq_password}@{self.rabbitmq_broker_id}.mq.{self.region}.amazonaws.com:{self.rabbitmq_port}"
+        parameters = pika.URLParameters(url)
+        parameters.ssl_options = pika.SSLOptions(context=ssl_context)
+
+        self.connection = pika.BlockingConnection(parameters)
         self.channel = self.connection.channel()
+        
+        # self.connection = pika.BlockingConnection(pika.ConnectionParameters(host=self.host))
+        # self.channel = self.connection.channel()
         
         self.channel.exchange_declare(exchange=self.exchange, exchange_type=self.exchange_type)
         self.channel.queue_declare(queue=self.queue)
@@ -60,9 +82,9 @@ class RestAPI:
         self.response_json = None
         self.correlation_id = str(uuid.uuid4())
 
-        # if self.connection.is_closed or not self.channel or self.channel.is_closed:
-        #     log.info(".......CONNECTION OR CHANNEL IS CLOSED, RECONNECTING.......")
-        #     self.connect()
+        if self.connection.is_closed or not self.channel or self.channel.is_closed:
+            log.info(".......CONNECTION OR CHANNEL IS CLOSED, RECONNECTING.......")
+            self.connect()
 
         self.channel.basic_publish(exchange=self.exchange, routing_key=self.routing_key,
             properties=pika.BasicProperties(
@@ -94,30 +116,39 @@ class RestAPI:
             
             try:
                 response = self.publish(message)
+                print(response)
                 if response is None:
                     return jsonify({"statusCode": 500, "message": "NO RESPONSE FROM SERVER"}), 500
-                return jsonify(response)
+                
+                return jsonify(response), response["statusCode"]
             except Exception as e:
+                print(e)
                 return jsonify({"statusCode": 500, "detail": str(e)}), 500
-            # finally:
-            #     if not self.connection.is_closed:
-            #         self.connection.close()
 
     def run(self, port=5000):
         
         """RUNS THE FLASK APPLICATION."""
         self.app.run(host='127.0.0.1', port=port, debug=True)
 
-if __name__ == '__main__':
     
-    # Define RabbitMQ connection parameters
-    host_name = 'localhost'
-    exchange_name = 'rpc_ndx_exchange'
-    exchange_type_name = 'direct'
-    routing_key_name = 'rpc_routing_key'
-    queue_name = 'ndx'
-    timeout = 10
 
-    # Create and run the RestAPI instance
-    fetch_ndx_data = RestAPI(host_name, exchange_name, exchange_type_name, routing_key_name, queue_name, timeout)
-    fetch_ndx_data.run()
+
+# # Accessing the values
+timeout = int(config['default']['timeout'])
+rabbitmq_user = config['rabbitmq']['user']
+rabbitmq_password = config['rabbitmq']['password']
+rabbitmq_broker_id = config['rabbitmq']['broker_id']
+rabbitmq_port = int(config['rabbitmq']['port'])
+rabbitmq_region = config['rabbitmq']['region']
+cipher_text = config['rabbitmq']['cipher_text']
+exchange_name = config['exchange']['name']
+exchange_type_name = config['exchange']['type']
+routing_key_name = config['routing']['key']
+queue_name = config['queue']['name']
+
+
+
+
+my_app = RestAPI( rabbitmq_user, rabbitmq_password, rabbitmq_broker_id, rabbitmq_region, rabbitmq_port, cipher_text, exchange_name, exchange_type_name, routing_key_name, queue_name, timeout)
+# my_app.run()
+app = my_app.app
