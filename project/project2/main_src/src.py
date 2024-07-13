@@ -250,18 +250,18 @@ class RestAPI:
             if request.headers.get('Content-Type') != 'application/json':
                 return jsonify({'error': 'Unsupported Media Type', 'message': 'Request must be in JSON format'}), 415
 
-            try:
-                data = request.json
-                username = data.get('username')
-                password = data.get('password')
+            # try:
+            data = request.json
+            username = data.get('username')
+            password = data.get('password')
 
-                if not username or not password:
-                    return jsonify({"message": "Both username and password are required."}), 400
+            if not username or not password:
+                return jsonify({"message": "Both username and password are required."}), 400
 
-                return self.register_user(username, password)
+            return self.register_user(username, password)
 
-            except Exception as e:
-                return jsonify({'error': 'Bad Request', 'message': 'Request body must be in JSON format'}), 400
+            # except Exception as e:
+            #     return jsonify({'error': 'Bad Request', 'message': 'Request body must be in JSON format'}), 400
 
         @self.app.route("/", methods=['GET'])
         def documentation():
@@ -293,4 +293,5 @@ user = config["jwt_payload"]['user']
 drl = config["jwt_payload"]['drl']
 
 my_app = RestAPI(ACCESS_KEY, BUCKET_NAME, OBJECT_KEY, SECRET_KEY, algo, iss, aud, exp_minutes, jti_prefix, role, user, drl)
-app=my_app.app
+# app=my_app.app
+my_app.run()
