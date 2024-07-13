@@ -264,7 +264,7 @@ class RestAPI:
               return self.register_user(username, password)
 
             except Exception as e:
-                return jsonify({'error': 'Bad Request', 'message': 'Request body must be in JSON format'}), 400
+                return jsonify({'error': 'Bad Request', 'message': f'Request body must be in JSON format {e}'}), 400
 
         @self.app.route("/", methods=['GET'])
         def documentation():
