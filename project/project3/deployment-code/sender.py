@@ -1,4 +1,5 @@
-from flask import Flask, jsonify, request
+from flask import Flask, request, jsonify, send_from_directory
+from flasgger import Swagger
 import pika
 import uuid
 import logging as log
@@ -6,6 +7,7 @@ import time
 import json
 import ssl
 import configparser
+
 
 config = configparser.ConfigParser()
 config.read('rabbitmq_config.ini')
@@ -37,7 +39,8 @@ class RestAPI:
         self.connect()
 
         self.app = Flask(__name__)
-        self.setup_routes()    
+        self.swagger = Swagger(self.app)  # Initialize Swagger with Flask app
+        self.setup_routes()
 
     def connect(self):
 
@@ -56,10 +59,7 @@ class RestAPI:
 
         self.connection = pika.BlockingConnection(parameters)
         self.channel = self.connection.channel()
-        
-        # self.connection = pika.BlockingConnection(pika.ConnectionParameters(host=self.host))
-        # self.channel = self.connection.channel()
-        
+                
         self.channel.exchange_declare(exchange=self.exchange, exchange_type=self.exchange_type)
         self.channel.queue_declare(queue=self.queue)
         self.channel.queue_bind(exchange=self.exchange, queue=self.queue, routing_key=self.routing_key)
@@ -75,17 +75,8 @@ class RestAPI:
         if self.correlation_id == properties.correlation_id:
             self.response_json = json.loads(body)
 
-    def publish(self, message):
+    def basic_publish(self, message):
         
-        """PUBLISHES A MESSAGE TO THE RABBITMQ QUEUE AND WAITS FOR A RESPONSE."""
-        
-        self.response_json = None
-        self.correlation_id = str(uuid.uuid4())
-
-        if self.connection.is_closed or not self.channel or self.channel.is_closed:
-            log.info(".......CONNECTION OR CHANNEL IS CLOSED, RECONNECTING.......")
-            self.connect()
-
         self.channel.basic_publish(exchange=self.exchange, routing_key=self.routing_key,
             properties=pika.BasicProperties(
                 reply_to=self.reply_queue,
@@ -94,8 +85,29 @@ class RestAPI:
             body=message
         )
 
+    def publish(self, message):
+        
+        """PUBLISHES A MESSAGE TO THE RABBITMQ QUEUE AND WAITS FOR A RESPONSE."""
+        
+        self.response_json = None
+        self.correlation_id = str(uuid.uuid4())
+        
+        try:
+            
+            if self.connection.is_closed or not self.channel or self.channel.is_closed:
+                log.info(".......CONNECTION OR CHANNEL IS CLOSED, RECONNECTING.......")
+                self.connect()
+
+            self.basic_publish(message)
+        
+        except (pika.exceptions.StreamLostError, pika.exceptions.AMQPHeartbeatTimeout):
+                log.info(".......STREAM LOST THE CONNECTION OR CHANNEL IS CLOSED, RECONNECTING.......")
+                self.connect()
+                self.basic_publish(message)
+
         try:
             self.connection.process_data_events(time_limit=self.timeout)
+        
         except pika.exceptions.AMQPTimeoutError:
             return None
         
@@ -107,6 +119,23 @@ class RestAPI:
         
         @self.app.route('/api/ndx/get-data', methods=['GET'])
         def get_info():
+            """
+            Endpoint to fetch data based on MSISDN value.
+            ---
+            parameters:
+              - name: msisdn
+                in: query
+                type: string
+                required: true
+                description: The MSISDN value
+            responses:
+              200:
+                description: Successful response with data
+              400:
+                description: Missing MSISDN value
+              500:
+                description: No response from server
+            """
             
             msisdn_val = request.args.get('msisdn')            
             if not msisdn_val:
@@ -115,16 +144,29 @@ class RestAPI:
             message = json.dumps({'msisdn': msisdn_val})
             
             try:
+                        
                 response = self.publish(message)
-                print(response)
                 if response is None:
                     return jsonify({"statusCode": 500, "message": "NO RESPONSE FROM SERVER"}), 500
                 
                 return jsonify(response), response["statusCode"]
+
             except Exception as e:
-                print(e)
-                return jsonify({"statusCode": 500, "detail": str(e)}), 500  @self.app.errorhandler(405)
+                return jsonify({"statusCode": 500, "detail": str(e)}), 500
         
+        # Additional API documentation
+        @self.app.route('/', methods=['GET'])   
+        def api_docs():
+            """
+            Endpoint to view API documentation.
+            ---
+            responses:
+              200:
+                description: Swagger UI page
+            """
+            return send_from_directory('static', 'index.html')
+
+
         def method_not_allowed(e):
             return jsonify({'error': 'Method Not Allowed', 'message': 'The method is not allowed for the requested URL.'}), 405
 
@@ -155,5 +197,5 @@ queue_name = config['queue']['name']
 
 
 my_app = RestAPI( rabbitmq_user, rabbitmq_password, rabbitmq_broker_id, rabbitmq_region, rabbitmq_port, cipher_text, exchange_name, exchange_type_name, routing_key_name, queue_name, timeout)
-# my_app.run()
-app = my_app.app
+my_app.run()
+# app = my_app.app
