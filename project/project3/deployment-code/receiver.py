@@ -50,10 +50,9 @@ class RabbitmqServer:
             log.info(".......RABBITMQ CONNECTED.......")
 
         except pika.exceptions.AMQPConnectionError as e:
-
             log.error(f".......FAILED TO CONNECT TO RABBITMQ: {e}.......")
-        except Exception as e:
 
+        except Exception as e:
             log.error(f".......UNEXPECTED ERROR DURING RABBITMQ CONNECTION: {e}.......")
 
     def purge_queue(self):
@@ -61,6 +60,7 @@ class RabbitmqServer:
         try:
             self.channel.queue_purge(queue=self.queue)
             log.info(".......QUEUE PURGED.......")
+
         except Exception as e:
             log.error(f".......FAILED TO PURGE QUEUE: {e}.......")
 
@@ -77,13 +77,16 @@ class RabbitmqServer:
             self.conn = redshift_connector.connect(**self.conn_params)
             self.cursor = self.conn.cursor()
             log.info(".......REDSHIFT DATABASE CONNECTED.......")
+
         except redshift_connector.errors.RedshiftConnectorError as e:
             log.error(f".......FAILED TO CONNECT TO REDSHIFT: {e}.......")
+        
         except Exception as e:
             log.error(f".......UNEXPECTED ERROR DURING REDSHIFT CONNECTION: {e}.......")
 
     def start_consume(self):
         """Starts consuming messages from RabbitMQ."""
+        
         if self.connection.is_closed or self.channel.is_closed:
             log.error(".......RABBITMQ CONNECTION IS NOT AVAILABLE.......")
             self.connect()
@@ -95,6 +98,7 @@ class RabbitmqServer:
 
     def publish(self, message, reply_to, corr_id):
         """Publishes a message to RabbitMQ."""
+        
         self.channel.basic_publish(
             exchange='',
             routing_key=reply_to,
@@ -106,7 +110,9 @@ class RabbitmqServer:
 
     def process_request(self, ch, method, properties, body):
         """Processes incoming request messages."""
+        
         try:
+        
             log.info(".......RECEIVED REQUEST.......")
             request_json = json.loads(body)
             msisdn_value = request_json.get("msisdn")
@@ -119,14 +125,18 @@ class RabbitmqServer:
                 self.publish(response, properties.reply_to, properties.correlation_id)
 
             ch.basic_ack(delivery_tag=method.delivery_tag)
+        
         except Exception as e:
+        
             log.error(f".......ERROR PROCESSING REQUEST: {e}.......")
             response = {"statusCode": 500, "message": "INTERNAL SERVER ERROR"}
             self.publish(response, properties.reply_to, properties.correlation_id)
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
     def basic_fetch_data(self, msisdn_value):
+        
         query = f'''
+        
             SELECT 
                 SUBSCRIBER_PERSONAL_ID, 
                 SUBSCRIBER_FIRST_NAME, 

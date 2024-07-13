@@ -93,7 +93,6 @@ class RestAPI:
         self.correlation_id = str(uuid.uuid4())
         
         try:
-            
             if self.connection.is_closed or not self.channel or self.channel.is_closed:
                 log.info(".......CONNECTION OR CHANNEL IS CLOSED, RECONNECTING.......")
                 self.connect()
@@ -101,9 +100,9 @@ class RestAPI:
             self.basic_publish(message)
         
         except (pika.exceptions.StreamLostError, pika.exceptions.AMQPHeartbeatTimeout):
-                log.info(".......STREAM LOST THE CONNECTION OR CHANNEL IS CLOSED, RECONNECTING.......")
-                self.connect()
-                self.basic_publish(message)
+            log.info(".......STREAM LOST THE CONNECTION OR CHANNEL IS CLOSED, RECONNECTING.......")
+            self.connect()
+            self.basic_publish(message)
 
         try:
             self.connection.process_data_events(time_limit=self.timeout)
@@ -139,7 +138,7 @@ class RestAPI:
             
             msisdn_val = request.args.get('msisdn')            
             if not msisdn_val:
-                return jsonify({"statusCode": 400, "message": "MSISDN VALUE IS MISSING"}), 400
+                return jsonify({"statusCode": 400, "detail": "MSISDN VALUE IS MISSING"}), 400
             
             message = json.dumps({'msisdn': msisdn_val})
             
@@ -147,32 +146,23 @@ class RestAPI:
                         
                 response = self.publish(message)
                 if response is None:
-                    return jsonify({"statusCode": 500, "message": "NO RESPONSE FROM SERVER"}), 500
+                    return jsonify({"statusCode": 500, "detail": "INTERNAL SERVER ERROR"}), 500
                 
                 return jsonify(response), response["statusCode"]
 
             except Exception as e:
-                return jsonify({"statusCode": 500, "detail": str(e)}), 500
+                return jsonify({"statusCode": 500, "detail": "INTERNAL SERVER ERROR - " + str(e)}), 500
         
-        # Additional API documentation
         @self.app.route('/', methods=['GET'])   
         def api_docs():
-            """
-            Endpoint to view API documentation.
-            ---
-            responses:
-              200:
-                description: Swagger UI page
-            """
             return send_from_directory('static', 'index.html')
 
-
         def method_not_allowed(e):
-            return jsonify({'error': 'Method Not Allowed', 'message': 'The method is not allowed for the requested URL.'}), 405
+            return jsonify({'error': 'Method Not Allowed', 'detail': 'The method is not allowed for the requested URL.'}), 405
 
         @self.app.errorhandler(404)
         def page_not_found(e):
-            return jsonify({'error': 'Invalid URL', 'message': 'The requested URL is not found on the server. It is to fetch ndx africa data'}), 404
+            return jsonify({'error': 'Invalid URL', 'detail': 'The requested URL is not found on the server. It is to fetch ndx africa data'}), 404
 
             
         

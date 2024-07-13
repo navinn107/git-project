@@ -40,16 +40,17 @@ class RestAPI:
 
         if register:
             if existing_user:
-                return jsonify({'message': "Username already exists"}), 400
+                return jsonify({'statusCode': 200,'results': "Username already exists"}), 200
 
             client_secret = hashlib.sha256(password.encode()).hexdigest()
             cursor.execute("INSERT INTO users (clientID, clientSecretKey) VALUES (?, ?)", (client_id, client_secret))
             conn.commit()
 
             return jsonify({
+                "statusCode": 200,
                 "message": "Registration successful",
                 "results": [{"clientID": client_id, "clientSecretKey": client_secret}]
-            })
+            }), 200
 
         return existing_user
 
@@ -82,15 +83,15 @@ class RestAPI:
                 token_expiration_time = datetime.fromtimestamp(decoded_payload['exp'])
 
                 if current_time > token_expiration_time:
-                    return jsonify({'message': 'Token expired'}), 401
+                    return jsonify({"statusCode": 401, 'detail': 'Token expired'}), 401
                 else:
                     return self.get_data()
 
             else:
-                return jsonify({'message': 'No authorization'}), 401
+                return jsonify({"statusCode": 401,'detail': 'No authorization'}), 401
 
         except jwt.InvalidTokenError:
-            return jsonify({'message': 'Invalid or expired token'}), 401
+            return jsonify({"statusCode": 401,'detail': 'Invalid or expired token'}), 401
 
     def register_user(self, username, password):
         client_id = hashlib.sha256(username.encode()).hexdigest()
@@ -104,9 +105,9 @@ class RestAPI:
                 token = self.generate_token(client_id)
                 return jsonify({'token': token}), 200
             else:
-                return jsonify({'message': "ClientID or ClientSecretKey is incorrect"}), 200
+                return jsonify({"statusCode": 200,'results': "ClientID or ClientSecretKey is incorrect"}), 200
         else:
-            return jsonify({'message': "User is not registered"}), 200
+            return jsonify({"statusCode": 200,'results': "User is not registered"}), 200
 
     def get_data(self):
         session = boto3.Session(aws_access_key_id=self.ACCESS_KEY, aws_secret_access_key=self.SECRET_KEY)
@@ -122,9 +123,9 @@ class RestAPI:
                 filter_data = [json_val for json_val in json_array if json_val["station_code"] == int(station_code)]
                 return jsonify({"results": filter_data})
             else:
-                return jsonify({'error': 'Bad Request', 'message': 'station_code is the only filter'}), 400
+                return jsonify({"statusCode": 400,'error': 'Bad Request', 'message': 'station_code is the only filter'}), 400
         else:
-            return jsonify({"results": json_array})
+            return jsonify({"statusCode": 200, "results": json_array})
 
     def setup_routes(self):
         @self.app.route('/api/ndx/get-data', methods=['POST'])
@@ -195,7 +196,7 @@ class RestAPI:
             client_id = data.get('clientID')
             client_secret = data.get('clientSecretKey')
             if not client_id or not client_secret:
-                return jsonify({"message": "Both clientID and clientSecretKey are required."}), 400
+                return jsonify({"statusCode": 400, "detail": "Both clientID and clientSecretKey are required."}), 400
             return self.get_token(client_id, client_secret)
 
         @self.app.route("/api/ndx/register", methods=['POST'])
@@ -264,10 +265,7 @@ class RestAPI:
 
         @self.app.route("/", methods=['GET'])
         def documentation():
-            """
-            Swagger UI documentation
-            """
-            return send_from_directory('.', 'documentation.html')
+            return send_from_directory('static', 'index.html')
 
         @self.app.errorhandler(405)
         def method_not_allowed(e):
@@ -275,7 +273,7 @@ class RestAPI:
 
         @self.app.errorhandler(404)
         def page_not_found(e):
-            return jsonify({'error': 'Invalid URL', 'message': 'The requested URL is not found on the server.'}), 404
+            return jsonify({'error': 'Invalid URL', 'detail': 'The requested URL is not found on the server.'}), 404
 
     def run(self, port=5000):
         self.app.run(host='127.0.0.1', port=port, debug=True)
