@@ -275,7 +275,7 @@ class RestAPI:
         def page_not_found(e):
             return jsonify({'error': 'Invalid URL', 'detail': 'The requested URL is not found on the server.'}), 404
 
-    def run(self, port=5000):
+    def run(self, port=8000):
         self.app.run(host='127.0.0.1', port=port, debug=True)
 
 
