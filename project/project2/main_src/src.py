@@ -33,8 +33,25 @@ class RestAPI:
         self.setup_routes()
 
     def fetch_clients(self, client_id, client_secretkey=None, password=None, register=False):
+        
         conn = sqlite3.connect('users.db')
         cursor = conn.cursor()
+
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users';")
+        table_exists = cursor.fetchone()
+
+        if table_exists:
+            print("Table 'users' already exists.")
+        else:
+            cursor.execute('''CREATE TABLE users (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                clientID TEXT NOT NULL UNIQUE,
+                                clientSecretKey TEXT NOT NULL
+                            )''')
+            print("Table 'users' created successfully.")
+
+        # conn = sqlite3.connect('users.db')
+        # cursor = conn.cursor()
         cursor.execute("SELECT * FROM users WHERE clientID=?", (client_id,))
         existing_user = cursor.fetchone()
 
