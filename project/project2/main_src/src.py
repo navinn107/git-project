@@ -293,4 +293,4 @@ user = config["jwt_payload"]['user']
 drl = config["jwt_payload"]['drl']
 
 my_app = RestAPI(ACCESS_KEY, BUCKET_NAME, OBJECT_KEY, SECRET_KEY, algo, iss, aud, exp_minutes, jti_prefix, role, user, drl)
-my_app.run()
+app=my_app.app
