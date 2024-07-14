@@ -1,0 +1,6 @@
+http://3.110.255.79/api/env/get-sensor-info - project1 - static api
+http://3.110.255.79/api/env/get-locations - project1 -  dynamic api
+
+http://13.232.9.205/apidocs/  -  project2-  data retrieval api
+
+http://13.201.153.50/apidocs/ -  project3 - Africa ndx api
