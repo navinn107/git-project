@@ -7,13 +7,17 @@ import jwt
 import boto3
 import configparser
 import json
+import redshift_connector
+import logging as log
 
 config = configparser.ConfigParser()
 config.read('restapi_config.ini')
+log.basicConfig(level=log.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 class RestAPI:
 
-    def __init__(self, ACCESS_KEY, BUCKET_NAME, OBJECT_KEY, SECRET_KEY, algo, iss, aud, exp_minutes, jti_prefix, role, user, drl):
+    def __init__(self, ACCESS_KEY, BUCKET_NAME, OBJECT_KEY, SECRET_KEY, algo, iss, aud, exp_minutes, jti_prefix, role, user, drl, redshift_host, redshift_dbname, redshift_user, redshift_password, redshift_port):
+        
         self.app = Flask(__name__)
         self.swagger = Swagger(self.app)
 
@@ -30,46 +34,94 @@ class RestAPI:
         self.user = user
         self.drl = drl
 
+        self.redshift_host = redshift_host
+        self.redshift_dbname = redshift_dbname
+        self.redshift_user = redshift_user
+        self.redshift_password = redshift_password
+        self.redshift_port = redshift_port
+
+        self.cursor = None
+        self.connect_db()
         self.setup_routes()
-
-    def fetch_clients(self, client_id, client_secretkey=None, password=None, register=False):
+          
+    def connect_db(self):
+      
+      """Establishes connection to the Redshift database."""
+      try:
         
-        conn = sqlite3.connect('users.db')
-        cursor = conn.cursor()
+        self.conn_params = {
+              'host': self.redshift_host,
+              'database': self.redshift_dbname,
+              'user': self.redshift_user,
+              'password': self.redshift_password,
+              'port': self.redshift_port}
+        
+        self.conn = redshift_connector.connect(**self.conn_params)
+        self.cursor = self.conn.cursor()
+        
+        log.info(".......REDSHIFT DATABASE CONNECTED.......")
+      
+      except (redshift_connector.InterfaceError, redshift_connector.OperationalError) as e:
+        log.error(f".......FAILED TO CONNECT TO REDSHIFT: {e}.......")
+        
+      except Exception as e:
+        log.error(f".......UNEXPECTED ERROR DURING REDSHIFT CONNECTION: {e}.......")
 
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users';")
-        table_exists = cursor.fetchone()
-
-        if table_exists:
-            print("Table 'users' already exists.")
-        else:
-            cursor.execute('''CREATE TABLE users (
-                                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                clientID TEXT NOT NULL UNIQUE,
-                                clientSecretKey TEXT NOT NULL
-                            )''')
-            print("Table 'users' created successfully.")
-
-        # conn = sqlite3.connect('users.db')
-        # cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE clientID=?", (client_id,))
-        existing_user = cursor.fetchone()
-
+    def basic_fetch_data(self, client_id):
+      
+      query = f'''        
+            SELECT *
+            FROM 
+                public.users 
+            WHERE 
+                CLIENTID = '{client_id}';
+      '''
+      self.cursor.execute(query)
+      
+      existing_user = self.cursor.fetchone()
+      return existing_user
+        
+    def registration(self, client_id, password, existing_user, register):
+        
         if register:
-            if existing_user:
-                return jsonify({'statusCode': 200,'results': "Username already exists"}), 200
+          
+          if existing_user:
+            return jsonify({'statusCode': 200,'results': "Username already exists"}), 200
+          
+          client_secret = hashlib.sha256(password.encode()).hexdigest()
+          self.cursor.execute(f"INSERT INTO public.users (clientID, clientSecretKey) VALUES ('{client_id}', '{client_secret}')")
+          self.conn.commit()
 
-            client_secret = hashlib.sha256(password.encode()).hexdigest()
-            cursor.execute("INSERT INTO users (clientID, clientSecretKey) VALUES (?, ?)", (client_id, client_secret))
-            conn.commit()
-
-            return jsonify({
+          return jsonify({
                 "statusCode": 200,
                 "message": "Registration successful",
                 "results": [{"clientID": client_id, "clientSecretKey": client_secret}]
             }), 200
 
-        return existing_user
+    def fetch_clients(self, client_id, password=None, register=False):
+      
+      try:
+          if not self.cursor:
+              self.connect_db()
+          
+          existing_user = self.basic_fetch_data(client_id)
+          
+          if register:
+              return self.registration(client_id, password, existing_user, register)
+
+      except (redshift_connector.InterfaceError, redshift_connector.OperationalError):
+        log.error(f"......BROKEN PIPE.......")
+        self.connect_db()
+        existing_user = self.basic_fetch_data(client_id)
+          
+        if register:
+            return self.registration(client_id, password, existing_user, register)      
+      
+      except Exception as e:
+        log.error(f".......ERROR FETCHING DATA.......")
+        return {"statusCode": 500, "message": "Error fetching data"}
+
+      return existing_user
 
     def generate_token(self, client_id):
         current_time = datetime.now()
@@ -269,19 +321,19 @@ class RestAPI:
             if request.headers.get('Content-Type') != 'application/json':
                 return jsonify({'error': 'Unsupported Media Type', 'message': 'Request must be in JSON format'}), 415
 
-            try:
+            # try:
               
-              data = request.json
-              username = data.get('username')
-              password = data.get('password')
+            data = request.json
+            username = data.get('username')
+            password = data.get('password')
 
-              if not username or not password:
-                  return jsonify({"message": "Both username and password are required."}), 400
+            if not username or not password:
+                return jsonify({"message": "Both username and password are required."}), 400
 
-              return self.register_user(username, password)
+            return self.register_user(username, password)
 
-            except Exception as e:
-                return jsonify({'error': 'Bad Request', 'message': f'Request body must be in JSON format {e}'}), 400
+            # except Exception as e:
+            #     return jsonify({'error': 'Bad Request', 'message': f'Request body must be in JSON format {e}'}), 400
 
         @self.app.route("/", methods=['GET'])
         def documentation():
@@ -303,6 +355,7 @@ ACCESS_KEY = config["aws"]['ACCESS_KEY']
 BUCKET_NAME = config["aws"]['BUCKET_NAME']
 OBJECT_KEY = config["aws"]['OBJECT_KEY']
 SECRET_KEY = config["aws"]['SECRET_KEY']
+
 algo = config["jwt_payload"]['algo']
 iss = config["jwt_payload"]['iss']
 aud = config["jwt_payload"]['aud']
@@ -312,6 +365,12 @@ role = config["jwt_payload"]['role']
 user = config["jwt_payload"]['user']
 drl = config["jwt_payload"]['drl']
 
-my_app = RestAPI(ACCESS_KEY, BUCKET_NAME, OBJECT_KEY, SECRET_KEY, algo, iss, aud, exp_minutes, jti_prefix, role, user, drl)
+redshift_host = config['redshift']['host']
+redshift_dbname = config['redshift']['dbname']
+redshift_user = config['redshift']['user']
+redshift_password = config['redshift']['password']
+redshift_port = config['redshift']['port']
+
+my_app = RestAPI(ACCESS_KEY, BUCKET_NAME, OBJECT_KEY, SECRET_KEY, algo, iss, aud, exp_minutes, jti_prefix, role, user, drl, redshift_host, redshift_dbname, redshift_user, redshift_password, redshift_port)
 app=my_app.app
-#my_app.run()
+# my_app.run()
