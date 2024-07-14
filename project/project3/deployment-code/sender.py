@@ -187,5 +187,5 @@ queue_name = config['queue']['name']
 
 
 my_app = RestAPI( rabbitmq_user, rabbitmq_password, rabbitmq_broker_id, rabbitmq_region, rabbitmq_port, cipher_text, exchange_name, exchange_type_name, routing_key_name, queue_name, timeout)
-my_app.run()
-# app = my_app.app
+# my_app.run()
+app = my_app.app
