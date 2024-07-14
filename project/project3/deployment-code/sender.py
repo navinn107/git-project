@@ -170,7 +170,7 @@ class RestAPI:
     def run(self, port=7000):
         
         """RUNS THE FLASK APPLICATION."""
-        self.app.run(host='127.0.0.1', port=port, debug=True)
+        self.app.run(host='0.0.0.0', port=port, debug=True)
 
 # # Accessing the values
 timeout = int(config['default']['timeout'])
@@ -187,5 +187,5 @@ queue_name = config['queue']['name']
 
 
 my_app = RestAPI( rabbitmq_user, rabbitmq_password, rabbitmq_broker_id, rabbitmq_region, rabbitmq_port, cipher_text, exchange_name, exchange_type_name, routing_key_name, queue_name, timeout)
-# my_app.run()
+#my_app.run()
 app = my_app.app
