@@ -78,7 +78,7 @@ class RabbitmqServer:
             self.cursor = self.conn.cursor()
             log.info(".......REDSHIFT DATABASE CONNECTED.......")
 
-        except redshift_connector.errors.RedshiftConnectorError as e:
+        except (redshift_connector.InterfaceError, redshift_connector.OperationalError):
             log.error(f".......FAILED TO CONNECT TO REDSHIFT: {e}.......")
         
         except Exception as e:
