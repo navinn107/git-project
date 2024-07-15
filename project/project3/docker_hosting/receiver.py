@@ -10,9 +10,7 @@ config.read('rabbitmq_config.ini')
 log.basicConfig(level=log.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 class RabbitmqServer:
-
-    def __init__(self,  rabbitmq_user, rabbitmq_password, rabbitmq_broker_id, region, rabbitmq_port, cipher_text, queue_name, redshift_host, redshift_dbname, redshift_user, redshift_password, redshift_port):
-        
+    def __init__(self, rabbitmq_user, rabbitmq_password, rabbitmq_broker_id, region, rabbitmq_port, cipher_text, queue_name, redshift_host, redshift_dbname, redshift_user, redshift_password, redshift_port):
         self.rabbitmq_user = rabbitmq_user
         self.rabbitmq_password = rabbitmq_password
         self.rabbitmq_broker_id = rabbitmq_broker_id
@@ -50,27 +48,24 @@ class RabbitmqServer:
 
             self.channel.queue_declare(queue=self.queue)
             log.info(".......RABBITMQ CONNECTED.......")
-        
+
         except pika.exceptions.AMQPConnectionError as e:
             log.error(f".......FAILED TO CONNECT TO RABBITMQ: {e}.......")
-        
+
         except Exception as e:
             log.error(f".......UNEXPECTED ERROR DURING RABBITMQ CONNECTION: {e}.......")
 
     def purge_queue(self):
-        
         """Purges the messages in the queue."""
-        
         try:
             self.channel.queue_purge(queue=self.queue)
             log.info(".......QUEUE PURGED.......")
-        
+
         except Exception as e:
             log.error(f".......FAILED TO PURGE QUEUE: {e}.......")
 
     def connect_db(self):
         """Establishes connection to the Redshift database."""
-        
         try:
             self.conn_params = {
                 'host': self.redshift_host,
@@ -82,8 +77,8 @@ class RabbitmqServer:
             self.conn = redshift_connector.connect(**self.conn_params)
             self.cursor = self.conn.cursor()
             log.info(".......REDSHIFT DATABASE CONNECTED.......")
-        
-        except redshift_connector.errors.RedshiftConnectorError as e:
+
+        except (redshift_connector.InterfaceError, redshift_connector.OperationalError):
             log.error(f".......FAILED TO CONNECT TO REDSHIFT: {e}.......")
         
         except Exception as e:
@@ -91,12 +86,12 @@ class RabbitmqServer:
 
     def start_consume(self):
         """Starts consuming messages from RabbitMQ."""
+        
         if self.connection.is_closed or self.channel.is_closed:
             log.error(".......RABBITMQ CONNECTION IS NOT AVAILABLE.......")
             self.connect()
 
         log.info(".......AWAITING RPC REQUESTS.......")
-
         self.channel.basic_qos(prefetch_count=1)
         self.channel.basic_consume(queue=self.queue, on_message_callback=self.process_request)
         self.channel.start_consuming()
@@ -104,11 +99,13 @@ class RabbitmqServer:
     def publish(self, message, reply_to, corr_id):
         """Publishes a message to RabbitMQ."""
         
-        self.channel.basic_publish(exchange='', routing_key=reply_to,
-                                   properties=pika.BasicProperties(
-                                       correlation_id=corr_id
-                                   ),
-                                   body=json.dumps(message))
+        self.channel.basic_publish(
+            exchange='',
+            routing_key=reply_to,
+            properties=pika.BasicProperties(correlation_id=corr_id),
+            body=json.dumps(message)
+        )
+        
         log.info(f".......PUBLISHED MESSAGE: {message}.......")
 
     def process_request(self, ch, method, properties, body):
@@ -123,12 +120,12 @@ class RabbitmqServer:
             if msisdn_value:
                 response = self.fetch_data(msisdn_value)
                 self.publish(response, properties.reply_to, properties.correlation_id)
-                ch.basic_ack(delivery_tag=method.delivery_tag)
             else:
                 response = {"statusCode": 400, "message": "MSISDN value is missing"}
                 self.publish(response, properties.reply_to, properties.correlation_id)
-                ch.basic_ack(delivery_tag=method.delivery_tag)
 
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+        
         except Exception as e:
         
             log.error(f".......ERROR PROCESSING REQUEST: {e}.......")
@@ -136,38 +133,39 @@ class RabbitmqServer:
             self.publish(response, properties.reply_to, properties.correlation_id)
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
+    def basic_fetch_data(self, msisdn_value):
+        
+        query = f'''
+        
+            SELECT 
+                SUBSCRIBER_PERSONAL_ID, 
+                SUBSCRIBER_FIRST_NAME, 
+                SUBSCRIBER_LAST_NAME, 
+                SUBSCRIBER_DOB,
+                DATE_OF_REGISTRATION,
+                MSISDN
+            FROM 
+                public.customers 
+            WHERE 
+                MSISDN = '{msisdn_value}';
+        '''
+        self.cursor.execute(query)
+        results = self.cursor.fetchall()
+        return self.fetch_response(results)
+
     def fetch_data(self, msisdn_value):
         """Fetches data from Redshift based on MSISDN value."""
-        
         try:
-        
-            query = f'''
-                SELECT 
-                    SUBSCRIBER_PERSONAL_ID, 
-                    SUBSCRIBER_FIRST_NAME, 
-                    SUBSCRIBER_LAST_NAME, 
-                    SUBSCRIBER_DOB,
-                    DATE_OF_REGISTRATION,
-                    MSISDN
-                FROM 
-                    public.customers 
-                WHERE 
-                    MSISDN = '{msisdn_value}';
-            '''
-
-            self.cursor.execute(query)
-            results = self.cursor.fetchall()
-            dictionary = self.fetch_response(results)
-
+            return self.basic_fetch_data(msisdn_value)
+        except (redshift_connector.InterfaceError, redshift_connector.OperationalError):
+            self.connect_db()
+            return self.basic_fetch_data(msisdn_value)
         except Exception as e:
             log.error(f".......ERROR FETCHING DATA: {e}.......")
-            dictionary = {"statusCode": 500, "message": "Error fetching data"}
-
-        return dictionary
+            return {"statusCode": 500, "message": "Error fetching data"}
 
     def fetch_response(self, results):
         """Formats fetched data into response format."""
-        dictionary = {}
         if results:
             data = {
                 "SUBSCRIBER_PERSONAL_ID": results[0][0],
@@ -177,17 +175,11 @@ class RabbitmqServer:
                 "DATE_OF_REGISTRATION": results[0][4].isoformat(),
                 "MSISDN": results[0][5]
             }
-            dictionary['statusCode'] = 200
-            dictionary["results"] = data
+            return {'statusCode': 200, "results": data}
         else:
-            dictionary['statusCode'] = 204
-            dictionary["message"] = "No content"
-
-        return dictionary
-
+            return {'statusCode': 204, "message": "No content"}
 
 if __name__ == '__main__':
-
     timeout = config['default']['timeout']
     rabbitmq_user = config['rabbitmq']['user']
     rabbitmq_password = config['rabbitmq']['password']
@@ -195,9 +187,8 @@ if __name__ == '__main__':
     rabbitmq_port = config['rabbitmq']['port']
     rabbitmq_region = config['rabbitmq']['region']
     cipher_text = config['rabbitmq']['cipher_text']
-
+    
     queue_name = config['queue']['name']
-
     redshift_host = config['redshift']['host']
     redshift_dbname = config['redshift']['dbname']
     redshift_user = config['redshift']['user']
@@ -205,5 +196,9 @@ if __name__ == '__main__':
     redshift_port = config['redshift']['port']
 
     # Create and start the RabbitmqServer instance
-    server = RabbitmqServer(rabbitmq_user, rabbitmq_password, rabbitmq_broker_id, rabbitmq_region, rabbitmq_port, cipher_text, queue_name, redshift_host, redshift_dbname, redshift_user, redshift_password, redshift_port)
+    server = RabbitmqServer(
+        rabbitmq_user, rabbitmq_password, rabbitmq_broker_id, rabbitmq_region,
+        rabbitmq_port, cipher_text, queue_name, redshift_host, redshift_dbname,
+        redshift_user, redshift_password, redshift_port
+    )
     server.start_consume()
