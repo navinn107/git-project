@@ -135,8 +135,8 @@ class RabbitmqServer:
 
     def basic_fetch_data(self, msisdn_value):
         
+        log.info(f".......QUERYING THE DATABASE.......")
         query = f'''
-        
             SELECT 
                 SUBSCRIBER_PERSONAL_ID, 
                 SUBSCRIBER_FIRST_NAME, 
@@ -149,7 +149,9 @@ class RabbitmqServer:
             WHERE 
                 MSISDN = '{msisdn_value}';
         '''
+
         self.cursor.execute(query)
+        log.info(f".......SUCCESSFULLY FETCHED.......")
         results = self.cursor.fetchall()
         return self.fetch_response(results)
 

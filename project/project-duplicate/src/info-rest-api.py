@@ -19,19 +19,19 @@ class RestAPI:
             "id": location_id,
             "observationDateTime": datetime.now().isoformat(),
             "airTemperature": {
-                "instValue": random.uniform(25.0, 35.0)
+                "instValue": random.randrange(30, 40, 3)
             },
             "o3": {
-                "instValue": random.uniform(10.0, 100.0)
+                "instValue": random.randrange(30, 40, 3)
             },
             "co2": {
-                "instValue": random.uniform(300.0, 500.0)
+                "instValue": random.randrange(30, 40, 3)
             },
             "pm10": {
-                "instValue": random.uniform(50.0, 150.0)
+                "instValue": random.randrange(100, 130, 3)
             },
             "ambientNoise": {
-                "instValue": random.uniform(40.0, 90.0)
+                "instValue": random.randrange(50, 60, 3)
             }
         }
 
@@ -56,6 +56,7 @@ class RestAPI:
         def page_not_found(e):
             return jsonify({'error': 'Invalid URL', 'message': 'The requested URL is not found on the server. It is to fetch the env data'}), 404
 
+        
     def run(self, port=5000):
         self.app.run(host='127.0.0.1', port=port, debug=True)
 
