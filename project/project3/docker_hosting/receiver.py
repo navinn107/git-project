@@ -154,7 +154,7 @@ class RabbitmqServer:
                 self.cursor.execute(query)
 
         except Exception as e:
-            log.error(f".......CONNECTING THE DB AGAIN: {e}.......")
+            log.info(f".......CONNECTING THE DB AGAIN.......")
             self.connect_db()
             self.cursor.execute(query)
 
