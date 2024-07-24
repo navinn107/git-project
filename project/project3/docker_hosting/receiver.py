@@ -150,8 +150,11 @@ class RabbitmqServer:
                 MSISDN = '{msisdn_value}';
         '''
         try:
+
             if not self.cursor:
-                self.cursor.execute(query)
+                self.connect_db()
+            
+            self.cursor.execute(query)
 
         except Exception as e:
             log.info(f".......CONNECTING THE DB AGAIN.......")
