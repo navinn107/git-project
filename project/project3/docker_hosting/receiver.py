@@ -149,19 +149,25 @@ class RabbitmqServer:
             WHERE 
                 MSISDN = '{msisdn_value}';
         '''
+            if not self.cursor:
+                self.cursor.execute(query)
 
-        self.cursor.execute(query)
+        except Exception as e:
+
         log.info(f".......SUCCESSFULLY FETCHED.......")
         results = self.cursor.fetchall()
         return self.fetch_response(results)
 
     def fetch_data(self, msisdn_value):
         """Fetches data from Redshift based on MSISDN value."""
+        
         try:
             return self.basic_fetch_data(msisdn_value)
+        
         except (redshift_connector.InterfaceError, redshift_connector.OperationalError):
             self.connect_db()
             return self.basic_fetch_data(msisdn_value)
+        
         except Exception as e:
             log.error(f".......ERROR FETCHING DATA: {e}.......")
             return {"statusCode": 500, "message": "Error fetching data"}

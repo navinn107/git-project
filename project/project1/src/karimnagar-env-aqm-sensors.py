@@ -19,7 +19,7 @@ class KARIMNAGAR_AQM_INFO:
             response.raise_for_status()
 
             if response.status_code == 200:
-                json_array = response.json()["sensorData"]
+                json_array = response.json()
                 self.transform_publish(json_array)
             else:
                 print(f"Error: {response.status_code}")
@@ -79,6 +79,6 @@ class KARIMNAGAR_AQM_INFO:
 
 # Example usage
 if __name__ == "__main__":
-    base_url = "http://example.com/api"
+    base_url = "http://3.110.255.79/api/env/get-sensor-info"
     karimnagar_aqm = KARIMNAGAR_AQM_INFO(base_url)
     karimnagar_aqm.get_data()
