@@ -135,8 +135,10 @@ class RabbitmqServer:
 
     def basic_fetch_data(self, msisdn_value):
         
-        log.info(f".......QUERYING THE DATABASE.......")
-        query = f'''
+
+        log.info(".......QUERYING THE DATABASE.......")
+        
+        query = '''
             SELECT 
                 SUBSCRIBER_PERSONAL_ID, 
                 SUBSCRIBER_FIRST_NAME, 
@@ -147,16 +149,24 @@ class RabbitmqServer:
             FROM 
                 public.customers 
             WHERE 
-                MSISDN = '{msisdn_value}';
+                MSISDN = %s;
         '''
+        
         try:
-
             if not self.cursor:
+                log.info("No cursor found, attempting to connect to the database.")
                 self.connect_db()
             
+            self.cursor.execute(query, (msisdn_value,))
+
+        except (redshift_connector.error.InterfaceError, TimeoutError) as e:
+            log.error(e)
+            log.info(f".......CONNECTING THE DB AGAIN 1.......")
+            self.connect_db()
             self.cursor.execute(query)
 
         except Exception as e:
+            log.error(e)
             log.info(f".......CONNECTING THE DB AGAIN.......")
             self.connect_db()
             self.cursor.execute(query)
