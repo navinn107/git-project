@@ -138,7 +138,7 @@ class RabbitmqServer:
 
         log.info(".......QUERYING THE DATABASE.......")
         
-        query = '''
+        query = f'''
             SELECT 
                 SUBSCRIBER_PERSONAL_ID, 
                 SUBSCRIBER_FIRST_NAME, 
@@ -149,7 +149,7 @@ class RabbitmqServer:
             FROM 
                 public.customers 
             WHERE 
-                MSISDN = %s;
+                MSISDN = {msisdn_value};
         '''
         
         try:
