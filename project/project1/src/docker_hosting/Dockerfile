@@ -13,4 +13,4 @@ COPY . /docker_hosting
 EXPOSE 80
 
 # Command to run the application
-CMD ["python", "app.py"]
+CMD ["python", "python_test_loki_script.py"]
